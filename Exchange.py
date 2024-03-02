@@ -10,6 +10,12 @@ secret = ""
 ticker = 'KRW-BTC'
 balance = 1
 discord_webhook_url =''
+ticker_name = 'BTC'
+stop_loss = 0.995 # 손절 퍼센트
+take_profit = 1.01 # 익절 퍼센트
+tp = 1.01
+sl = 0.995
+tp2 = 1.025
 
 def get_rsi(df, period=14): # df에 'RSI'추가해서 df반환
     asd = df["close"]
@@ -105,11 +111,7 @@ def buy(i):
 profit_sell = 0
 loss_sell = 0   
 
-stop_loss = 0.995 # 손절 퍼센트
-take_profit = 1.01 # 익절 퍼센트
-tp = 1.01
-sl = 0.995
-tp2 = 1.025
+
 
 def sell(i):
     global price, buy_price, take_profit, stop_loss, profit_sell, loss_sell, tp, sl, tp2
@@ -152,7 +154,7 @@ upbit = pyupbit.Upbit(access, secret)
 message(f'autotrade start\nticker : {ticker}\ntake_profit : {take_profit}\nstop_loss : {stop_loss}')
 
 # 자동매매 시작
-if get_balance("BTC") > 0:
+if get_balance(f"{ticker_name}") > 0:
     Buying = True
 else:
     Buying = False
@@ -169,7 +171,7 @@ while True:
             '''구매'''
             krw = get_balance("KRW")
             if krw > 5000: #업비트 최소주문금액
-                upbit.buy_market_order("KRW-BTC", krw*0.9995)
+                upbit.buy_market_order(f"ticker", krw*0.9995)
                 Buying = True
                 buy_price = price
                 message("매수완료, 매수가격 : {0}원".format(buy_price))
@@ -177,15 +179,15 @@ while True:
                 message("잔액이 부족합니다")
         elif Buying == True and sell(i) == True:
             '''판매'''
-            btc = get_balance("BTC")
-            upbit.sell_market_order("KRW-BTC", btc*0.9995)
+            btc = get_balance(f"{ticker_name}")
+            upbit.sell_market_order(f"{ticker}", btc*0.9995)
             Buying = False
             sell_price = price
             ror = (((sell_price/buy_price))*balance*0.9995 - balance*0.0005)*100
             balance = 1 # 초기화
             message("매도완료, 매도가격 : {0}, 거래 수익률 : {1}%".format(sell_price,ror))
         else:
-            message("pass")
+            message("-- pass --\ncheck : {0}\ncount : {1}\nprice : {2}".format(check,count,price))
         time.sleep(60)
     except Exception as e:
         message("error:{0}".format(e))
