@@ -7,15 +7,15 @@ import requests as rq
 
 access = ""
 secret = ""
-ticker = 'KRW-BTC'
+ticker = 'KRW-SEI'
 balance = 1
 discord_webhook_url =''
-ticker_name = 'BTC'
-stop_loss = 0.995 # 손절 퍼센트
-take_profit = 1.01 # 익절 퍼센트
-tp = 1.01
-sl = 0.995
-tp2 = 1.025
+ticker_name = 'SEI'
+stop_loss = 0.99 # 손절 퍼센트
+take_profit = 1.015 # 익절 퍼센트
+sl = 0.99
+tp2 = 1.06
+# sell_price, buy_price = 0, 0
 
 def get_rsi(df, period=14): # df에 'RSI'추가해서 df반환
     asd = df["close"]
@@ -60,6 +60,8 @@ class hk:
         close = (self.open + self.close + self.low + self.high)/4
         return close
     def o(self):
+        if self.i == 1:
+            return self.open
         open = (hk(self.i-1).c() + hk(self.i-1).c()) / 2
         return open
     def h(self):
@@ -86,7 +88,6 @@ def is_rhammer(i):
     else:
         return False
     
-
 check = False
 count = 0
 
@@ -94,16 +95,15 @@ def buy(i):
     global check, count
     if check == False:
         if df['K'].iloc[i-2] < df['D'].iloc[i-2] and df['K'].iloc[i-1] > df['D'].iloc[i-1]:
-            if df['K'].iloc[i-1] - df['K'].iloc[i-1] > 0:
-                check = True
-                count = 0
-    if check == True:
+            check = True
+            count = 0
+    if check == True and check_time() == True:
         count += 1
     if count == 5 and check == True:
         check = False
         count = 0
-    if check == True:
-        if is_rhammer(i) == True and hk(i-1).c()-hk(i-1).o() > 0:
+    if check == True and buy_time() == True:
+        if is_rhammer(i) == True:
             check = False
             count = 0
             return True
@@ -111,26 +111,21 @@ def buy(i):
 profit_sell = 0
 loss_sell = 0   
 
-
-
 def sell(i):
     global price, buy_price, take_profit, stop_loss, profit_sell, loss_sell, tp, sl, tp2
-    if price/buy_price > take_profit: # 익절
+    if price/buy_price > take_profit:
         if take_profit == tp and is_rhammer(i) == True and is_rhammer(i-1) == True:
             take_profit = tp2
             stop_loss = 1.001
             return False
-        profit_sell += 1
         stop_loss = sl
         take_profit = tp
         return True
-    elif price/buy_price < stop_loss: # 손절
-        loss_sell += 1
+    elif price/buy_price < stop_loss:
         stop_loss = sl
         return True
     else:
         return False
-
 
 def get_balance(ticker):
     balances = upbit.get_balances()
@@ -147,14 +142,33 @@ def message(message):
     rq.post(discord_webhook_url,data=msg)
     print(message)
 
-
+def sell_time():
+    t = time.localtime().tm_min
+    if t == 29 or t == 59:
+        return True
+    else:
+        return False
+    
+def check_time():
+    t = time.localtime().tm_min
+    if t == 0 or t == 30:
+        return True
+    else:
+        return False
+    
+def buy_time():
+    t = time.localtime().tm_min
+    if 30 >= t >= 25 or 60 > t >= 55:
+        return True
+    else:
+        return False
 
 # 로그인
 upbit = pyupbit.Upbit(access, secret)
 message(f'autotrade start\nticker : {ticker}\ntake_profit : {take_profit}\nstop_loss : {stop_loss}')
 
 # 자동매매 시작
-if get_balance(f"{ticker_name}") > 0:
+if get_balance(f"{ticker_name}") >= 1:
     Buying = True
 else:
     Buying = False
@@ -165,22 +179,23 @@ while True:
         message(now)
         get_current_ohlcv(ticker)
         i = len(df) - 1
-        price = df['open'].iloc[-1]
+        price = df['close'].iloc[-1]
+
 
         if Buying == False and buy(i) == True:
             '''구매'''
             krw = get_balance("KRW")
             if krw > 5000: #업비트 최소주문금액
-                upbit.buy_market_order(f"ticker", krw*0.9995)
+                upbit.buy_market_order(f"{ticker}", krw*0.9995)
                 Buying = True
                 buy_price = price
                 message("매수완료, 매수가격 : {0}원".format(buy_price))
             else:
                 message("잔액이 부족합니다")
-        elif Buying == True and sell(i) == True:
+        elif Buying == True and sell(i) == True and sell_time() == True:
             '''판매'''
             btc = get_balance(f"{ticker_name}")
-            upbit.sell_market_order(f"{ticker}", btc*0.9995)
+            upbit.sell_market_order(f"{ticker}", btc)
             Buying = False
             sell_price = price
             ror = (((sell_price/buy_price))*balance*0.9995 - balance*0.0005)*100
@@ -191,4 +206,4 @@ while True:
         time.sleep(60)
     except Exception as e:
         message("error:{0}".format(e))
-        time.sleep(60)
+        time.sleep(0)
