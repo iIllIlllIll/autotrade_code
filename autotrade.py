@@ -14,10 +14,10 @@ webhook_url = ''
 
 
 # 초기설정
-leverage = 10
+leverage = 20
 symbol = "BTCUSDT"
 sell_price = 0 # 마지막 판매 가격
-n = 7 # 100/2^n
+n = 4 # 100/2^n
 
 # 지갑 잔액 체크
 def get_usdt_balance():
@@ -154,6 +154,7 @@ def check_order_status(symbol, order_id):
 buying = False # 매수상태일때 True
 count = 0
 waiting = False # 주문 대기상태일 때 True
+order = None
 
 print('''                                s                     s                                ..                  
                                :8                    :8                              dF                    
@@ -196,13 +197,15 @@ while True:
     inv_amount = entryprice*positionAmt/leverage # 투입금액
     if inv_amount != 0:
         pnl = unrealizedProfit/inv_amount*100 # PNL
+    else:
+        pnl = 0
     liquidation_price = position_info['liquidationPrice']
 
 
     if buying == False:
         if sell_price != 0:
-            if (current_price - sell_price)/sell_price < -0.02:
-                percentage = 100/2**n
+            if (current_price - sell_price)/sell_price < -0.01:
+                percentage = 100/(2**n)
                 order = execute_limit_long_order(symbol,current_price,percentage)
                 message(f"매수주문완료\n현재가격 : {current_price}")
     
@@ -215,7 +218,7 @@ while True:
             
 
         # 총액 매도 30퍼 이득
-        if pnl >= 30:
+        if pnl >= 40:
             order = execute_limit_sell_order(symbol,current_price,100)
             message(f"매도완료\nPNL : {pnl}\nRealizedProfit : {unrealizedProfit}")
             sell_price = current_price
@@ -223,14 +226,13 @@ while True:
             count = 0
 
     now = datetime.now()
-    if now.minute == 0:  # 정시(00분)인지 확인
+    if now.minute == 0 or True:  # 정시(00분)인지 확인
         if buying == False:
             status = '매수 대기중'
         else:
             status = '매수중'
         blnc = get_usdt_balance()
-        msg = f'''[ 정기보고 ]\n현재 상태 : {status}\n현재 가격 : {current_price}\n현재 pnl : {pnl}\n
-                    잔액 : {blnc}\n추가매수횟수 : {count}'''
+        msg = f'''[ 정기보고 ]\n현재 상태 : {status}\n현재 가격 : {current_price}\n현재 pnl : {pnl}\n잔액 : {blnc}\n추가매수횟수 : {count}'''
         message(msg)
         time.sleep(60)
 
