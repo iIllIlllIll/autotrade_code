@@ -20,17 +20,24 @@ sell_price = 0 # 마지막 판매 가격
 n = 4 # 100/2^n
 
 # 지갑 잔액 체크
-def get_usdt_balance():
-    balance = client.futures_account_balance()
-    for asset in balance:
-        if asset['asset'] == 'USDT':
-            return float(asset['balance'])
-    return 0.0
+def get_futures_asset_balance(symbol='USDT'):
+    try:
+        balance_info = client.futures_account_balance()
+        for balance in balance_info:
+            if balance['asset'] == symbol:
+                return float(balance['availableBalance'])
+        return 0.0
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return 0.0
 # 코인 잔액 체크
 def get_asset_balance(symbol):
     try:
-        balance = client.get_asset_balance(asset=symbol)
-        return float(balance['free'])
+        positions = client.futures_position_information()
+        for position in positions:
+            if position['symbol'] == symbol:
+                return position['isolatedMargin']
+        return None
     except Exception as e:
         print(f"An error occurred: {e}")
         return 0.0
@@ -45,7 +52,7 @@ def set_leverage(symbol, leverage):
 
 # 지정가 롱 포지션 매수주문
 def place_limit_long_order(symbol, price, quantity, leverage):
-    set_leverage(leverage)
+    set_leverage(symbol,leverage)
     try:
         order = client.futures_create_order(
             symbol=symbol,
@@ -60,22 +67,17 @@ def place_limit_long_order(symbol, price, quantity, leverage):
     except Exception as e:
         print(f"An error occurred: {e}")
 
-def calculate_order_quantity(symbol, price, percentage):
-    usdt_balance = get_usdt_balance()
-    order_amount_usdt = usdt_balance * percentage / 100
-    info = client.futures_exchange_info()
-    for s in info['symbols']:
-        if s['symbol'] == symbol:
-            min_qty = float(s['filters'][1]['minQty'])
-            quantity = order_amount_usdt / float(price)
-            return max(quantity, min_qty)
-    return 0.0
+def calculate_order_quantity(percentage):
+    usdt_balance = get_futures_asset_balance()
+    buy_quantity = usdt_balance * percentage / 100
+    return round_price_to_tick_size(buy_quantity,tick_size)
 
 # 주문 실행 함수 : 종목, 지정가격, 퍼센트(자산), 레버리지
 def execute_limit_long_order(symbol, price, percentage, leverage):
-    quantity = calculate_order_quantity(symbol, price, percentage)
+    quantity = calculate_order_quantity(percentage)
     if quantity > 0:
-        o = place_limit_long_order(symbol, price, quantity, leverage)
+        size = round(quantity/price*leverage,3)
+        o = place_limit_long_order(symbol, price, size, leverage)
         return o
     else:
         print("Insufficient balance or invalid quantity.")
@@ -96,12 +98,13 @@ def place_limit_sell_order(symbol, price, quantity):
 def calculate_sell_quantity(symbol, percentage):
     balance = get_asset_balance(symbol)
     sell_quantity = balance * percentage / 100
-    return sell_quantity
+    return round_price_to_tick_size(sell_quantity,tick_size)
 
 def execute_limit_sell_order(symbol, price, percentage):
     sell_quantity = calculate_sell_quantity(symbol, percentage)
     if sell_quantity > 0:
-        o = place_limit_sell_order(symbol, price, sell_quantity)
+        sell_size = round(sell_quantity/current_price*leverage,3)
+        o = place_limit_sell_order(symbol, price, sell_size)
         return o 
     else:
         print("Insufficient balance or invalid quantity.")
@@ -148,6 +151,21 @@ def check_order_status(symbol, order_id):
         print(f"An error occurred: {e}")
         return None
 
+# 틱 사이즈 확인
+def get_tick_size(symbol):
+    exchange_info = client.futures_exchange_info()
+    for s in exchange_info['symbols']:
+        if s['symbol'] == symbol:
+            for f in s['filters']:
+                if f['filterType'] == 'PRICE_FILTER':
+                    return float(f['tickSize'])
+    return None
+
+# 틱 사이즈로 반올림
+def round_price_to_tick_size(price, tick_size):
+    return round(price / tick_size) * tick_size
+
+
 
 # 실시간 자료얻기
 
@@ -168,7 +186,12 @@ print('''                                s                     s                
 9888  9888   "8888Y 8888"   ^%888*    "*888*P"    ^%888*    ^"8888*"    9888  9888  .888N..888  '8888c. .+ 
 "888*""888"   `Y"   'YP       'Y"       'Y"         'Y"        "Y"      "888*""888"  `"888*""    "88888%   
  ^Y"   ^Y'                                                               ^Y"   ^Y'      ""         "YP'    
-                                                                                                           ''')
+                                                                                                           
+    ver 1.1
+    2024-07-19             
+    made by 윈터띠                                                                                   
+      
+                                                                                                            ''')
 message('''자동매매를 시작합니다''')
 
 while True:
@@ -189,7 +212,8 @@ while True:
         buying = False
 
 
-    current_price = client.get_symbol_ticker(symbol=f"{symbol}") # 실시간 가격
+    current_price_info = client.get_symbol_ticker(symbol=f"{symbol}")
+    current_price = float(current_price_info['price'])
     position_info = get_futures_position_info(symbol)
     unrealizedProfit = float(position_info['unRealizedProfit'])
     positionAmt = float(position_info['positionAmt']) # 포지션 수량
@@ -201,20 +225,24 @@ while True:
         pnl = 0
     liquidation_price = position_info['liquidationPrice']
 
+    tick_size = get_tick_size(symbol)
 
     if buying == False:
         if sell_price != 0:
             if (current_price - sell_price)/sell_price < -0.01:
                 percentage = 100/(2**n)
                 order = execute_limit_long_order(symbol,current_price,percentage)
-                message(f"매수주문완료\n현재가격 : {current_price}")
+                iquantity = calculate_order_quantity(percentage)
+                message(f"매수주문완료\n현재가격 : {current_price}\n매수금액 : {iquantity}")
     
     if buying == True:
         # 추가매수 -50퍼일때
         if pnl <= -50:
-            order = place_limit_long_order(symbol,current_price,inv_amount,leverage)
+            order_price = round_price_to_tick_size(current_price,tick_size)
+            inv_size = round(inv_amount/current_price*leverage,3)
+            order = place_limit_long_order(symbol,order_price,inv_size,leverage)
             count += 1
-            message(f"추가매수주문완료\n현재가격 : {current_price}\n추가매수횟수 : {count}")
+            message(f"추가매수주문완료\n현재가격 : {current_price}\n추가매수횟수 : {count}\n매수금액 : {inv_amount}")
             
 
         # 총액 매도 30퍼 이득
@@ -231,8 +259,17 @@ while True:
             status = '매수 대기중'
         else:
             status = '매수중'
-        blnc = get_usdt_balance()
-        msg = f'''[ 정기보고 ]\n현재 상태 : {status}\n현재 가격 : {current_price}\n현재 pnl : {pnl}\n잔액 : {blnc}\n추가매수횟수 : {count}'''
+        blnc = get_futures_asset_balance()
+        msg = f'''
+        ╔═══━━━───  STATUS  ───━━━═══╗
+         현재 상태 : {status}
+         현재 가격 : {current_price}
+         현재 pnl : {pnl}
+         잔액 : {blnc}
+         매수금액 : {inv_amount}
+         현재금액 : {inv_amount+unrealizedProfit}
+         추가매수횟수 : {count}
+                '''
         message(msg)
         time.sleep(60)
 
