@@ -197,7 +197,7 @@ message('''자동매매를 시작합니다''')
 while True:
     # 매수상태인지 체크
     position_info = get_futures_position_info(symbol)
-    if position_info and float(position_info['positionAmt']) != 0:
+    if float(position_info['positionAmt']) != 0:
         buying = True
         if order != None:
             order_id = order['orderId']
@@ -227,15 +227,21 @@ while True:
 
     tick_size = get_tick_size(symbol)
 
-    if buying == False:
+    today_date = datetime.today()
+    date_diff = today_date - sell_date
+    minute_diff = date_diff.total_seconds()/60
+
+    if buying == False and order == None:
         if sell_price != 0:
             if (current_price - sell_price)/sell_price < -0.01:
                 percentage = 100/(2**n)
                 order = execute_limit_long_order(symbol,current_price,percentage)
                 iquantity = calculate_order_quantity(percentage)
                 message(f"매수주문완료\n현재가격 : {current_price}\n매수금액 : {iquantity}")
+            elif 1440*3 + 10 >= minute_diff >= 1440*3:
+                sell_price = current_price
     
-    if buying == True:
+    if buying == True and order == None:
         # 추가매수 -50퍼일때
         if pnl <= -50:
             order_price = round_price_to_tick_size(current_price,tick_size)
@@ -246,15 +252,16 @@ while True:
             
 
         # 총액 매도 30퍼 이득
-        if pnl >= 40:
+        if pnl >= 50 and order == None:
             order = execute_limit_sell_order(symbol,current_price,100)
             message(f"매도완료\nPNL : {pnl}\nRealizedProfit : {unrealizedProfit}")
             sell_price = current_price
             percentage = 100/2**n
             count = 0
+            sell_date = datetime.today()
 
     now = datetime.now()
-    if now.minute == 0 or True:  # 정시(00분)인지 확인
+    if now.minute == 0:  # 정시(00분)인지 확인
         if buying == False:
             status = '매수 대기중'
         else:
