@@ -19,16 +19,28 @@ import base64
 import json
 from openai import OpenAI
 
-openai_api_key = ''
+
+
+key_file_path = "keys.json"
+
+# JSON 파일 읽기
+with open(key_file_path, "r") as file:
+    data = json.load(file)
+
+# 변수에 접근
+api_key = data["api_key"]
+api_secret = data["api_secret"]
+openai_api_key = data['openai_api_key']
+TOKEN = data['TOKEN']
+webhook_url = data['webhook_url']
+webhook_url_alert = data['webhook_url_alert']
+
 openaiclient = OpenAI(api_key=openai_api_key)
 
 # Binance API 설정
-api_key = ''
-api_secret = ''
 client = Client(api_key, api_secret)
 
 # Discord 봇 설정
-TOKEN = ''
 
 # Intents 설정
 intents = discord.Intents.default()
@@ -36,8 +48,7 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-webhook_url = ''
-webhook_url_alert = ''
+
 
 def encode_image(image_path):
     with open(image_path, "rb") as image_file:

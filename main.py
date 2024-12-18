@@ -43,6 +43,7 @@ TOKEN = data['TOKEN']
 webhook_url = data['webhook_url']
 webhook_url_alert = data['webhook_url_alert']
 
+
 client = Client(api_key, api_secret)
 openaiclient = OpenAI(api_key=openai_api_key)
 
@@ -50,15 +51,34 @@ openaiclient = OpenAI(api_key=openai_api_key)
 symbol = 'BTCUSDT'
 leverage = 20
 
-with open("msg_system.txt", "r",encoding="utf-8") as file:
-    msg_system = file.read()
-with open("msg_system_warn.txt","r",encoding="utf-8") as file:
-    msg_system_warn = file.read()
+
 
 Aicommand = False
 is_running = False
 
+
+
+
 setup(bot)
+
+@bot.event
+async def on_ready():
+    print(f'We have logged in as {bot.user}')
+    print('''
+                               :8                    :8                              dF                    
+               x.    .        .88           u.      .88       .u    .               '88bu.                 
+      u      .@88k  z88u     :888ooo  ...ue888b    :888ooo  .d88B :@8c        u     '*88888bu        .u    
+   us888u.  ~"8888 ^8888   -*8888888  888R Y888r -*8888888 ="8888f8888r    us888u.    ^"*8888N    ud8888.  
+.@88 "8888"   8888  888R     8888     888R I888>   8888      4888>'88"  .@88 "8888"  beWE "888L :888'8888. 
+9888  9888    8888  888R     8888     888R I888>   8888      4888> '    9888  9888   888E  888E d888 '88%" 
+9888  9888    8888  888R     8888     888R I888>   8888      4888>      9888  9888   888E  888E 8888.+"    
+9888  9888    8888 ,888B .  .8888Lu= u8888cJ888   .8888Lu=  .d888L .+   9888  9888   888E  888F 8888L      
+9888  9888   "8888Y 8888"   ^%888*    "*888*P"    ^%888*    ^"8888*"    9888  9888  .888N..888  '8888c. .+ 
+"888*""888"   `Y"   'YP       'Y"       'Y"         'Y"        "Y"      "888*""888"  `"888*""    "88888%   
+ ^Y"   ^Y'                                                               ^Y"   ^Y'      ""         "YP'    
+                                                                                                           
+          
+''')
 
 init_db()
 bot.run(TOKEN)

@@ -57,6 +57,11 @@ countforwarn = 3
 WARNINGFORLOSS = True
 
 
+with open("msg_system.txt", "r",encoding="utf-8") as file:
+    msg_system = file.read()
+with open("msg_system_warn.txt","r",encoding="utf-8") as file:
+    msg_system_warn = file.read()
+
 
 
 # 봇 명령어 정의
@@ -88,9 +93,9 @@ async def get_status(ctx):
         infprofitmode = '🔴OFF'
 
     if AI_mode == True:
-        aimode_msg = '🤖🟢ON'
+        aimode_msg = '🟢ON'
     else:
-        aimode_msg = '🤖🔴OFF'
+        aimode_msg = '🔴OFF'
 
     if WARNINGFORLOSS is True:
         warn = "⚠️WARNING"
@@ -104,7 +109,7 @@ async def get_status(ctx):
     embed.add_field(name="잔액", value=f"{blnc} USDT", inline=True)
     embed.add_field(name="매수 금액", value=f"{inv_amount}", inline=True)
     embed.add_field(name="현재 금액", value=f"{inv_amount + unrealizedProfit}", inline=True)
-    embed.add_field(name="현재 수익", value=f"💸{unrealizedProfit}", inline=True)
+    embed.add_field(name="💸현재 수익", value=f"{unrealizedProfit}", inline=True)
     embed.add_field(name="추가 매수 횟수", value=f"{count}", inline=True)
     embed.add_field(name="마지막 판매 금액", value=f"{sell_price}", inline=True)
     embed.add_field(name="매수 예정 금액", value=f"{buy_price}", inline=True)
@@ -114,7 +119,7 @@ async def get_status(ctx):
     embed.add_field(name="레버리지", value=f"{leverage}", inline=True)
     embed.add_field(name="n값", value=f"{n}", inline=True)
     embed.add_field(name="Infinte Profit Mode", value=f"{infprofitmode}", inline=True)
-    embed.add_field(name="AI Trading Mode", value=f"{aimode_msg}", inline=True)
+    embed.add_field(name="🤖AI Trading Mode", value=f"{aimode_msg}", inline=True)
     embed.add_field(name="WARNING", value=f"{warn}",inline=True)
 
     await ctx.send(embed=embed)
@@ -137,7 +142,8 @@ async def start(ctx):
     if not is_running:
         is_running = True
         await ctx.send("자동매매를 시작합니다")
-        bot.loop.create_task(start_trading_strategy())
+        # asyncio.create_task()를 사용하여 비동기 작업을 시작
+        asyncio.create_task(start_trading_strategy())
     else:
         await ctx.send("자동매매가 이미 실행 중입니다")
 
@@ -243,7 +249,7 @@ async def set_lev(ctx, value: int):
     await ctx.send(f"레버리지가 {value}로 설정되었습니다.")
 
 @bot.command(name='set_countforwarn')
-async def countforwarn(ctx, value: int):
+async def countforwarn2(ctx, value: int):
     global countforwarn
     countforwarn = value
     await ctx.send(f"countforwarn 변수가 {value}로 설정되었습니다")
@@ -432,6 +438,17 @@ async def start_trading_strategy():
     sell_price = 0
     ready_date = datetime.today()
     last_buy_date = datetime.today()
+    
+    sta = None
+    current_price = None
+    blnc = 0
+    inv_amount = 0
+    unrealizedProfit = 0
+    pnl = 0
+
+
+    ready_reason = None
+
 
     buying = False  # 매수상태일때 True
     count = 0
@@ -496,11 +513,11 @@ You are a Bitcoin Investment Assistance AI, which judges when to buy and when to
 # Current Price : {current_price}
 
 '''+ msg_current_status
-            msg_user_wait = f'''
-# last sell time : {sell_date}
-# 
+#             msg_user_wait = f'''
+# # last sell time : {sell_date}
+# # 
 
-'''
+# '''
 
 
 
@@ -846,9 +863,9 @@ REASON : {decrease_status.get('reason') if decrease_status else None}
                     infprofitmode = '🔴OFF'
 
                 if AI_mode == True:
-                    aimode_msg = '🤖🟢ON'
+                    aimode_msg = '🟢ON'
                 else:
-                    aimode_msg = '🤖🔴OFF'
+                    aimode_msg = '🔴OFF'
 
                 if WARNINGFORLOSS is True:
                     warn = "⚠️WARNING"
@@ -895,3 +912,4 @@ def setup(bot):
     for name, obj in inspect.getmembers(sys.modules[__name__]):
         if isinstance(obj, commands.Command):
             bot.add_command(obj)
+
