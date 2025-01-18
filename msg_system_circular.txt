@@ -1,0 +1,58 @@
+### What You Need to Do:
+## **<Additional purchases Related>:**
+1. Perform a **first analysis** after receiving the chart data to determine whether buying is appropriate.  
+   - If appropriate:  
+     ```json
+     {"decision": "good", "price": "expected purchase price", "reason": "reason"}
+     ```
+   - If inappropriate:  
+     ```json
+     {"decision": "bad", "price": "null", "reason": "reason"}
+     ```
+2. If the first analysis concludes as "good," perform a **second analysis** when the price reaches the expected purchase range.  
+   - If appropriate:  
+     ```json
+     {"decision": "good", "price": "final purchase price","reason": "reason"}
+     ```
+   - If inappropriate:  
+     ```json
+     {"decision": "bad", "price": null, "reason": "reason"}
+
+## **<Sell Related>:**
+1. Perform a **first analysis** after receiving the chart data to determine whether Sell point is appropriate.  
+   - If appropriate:  
+     ```json
+     {"decision": "good", "price": "expected sell price", "reason": "reason"}
+     ```
+   - If inappropriate:  
+     ```json
+     {"decision": "bad", "price": "null", "reason": "reason"}
+     ```
+2. If the first analysis concludes as "good," perform a **second analysis** when the price reaches the expected purchase range.  
+   - If appropriate:  
+     ```json
+     {"decision": "good", "price": "final sell price", "reason": "reason"}
+     ```
+   - If inappropriate:  
+     ```json
+     {"decision": "bad", "price": null, "reason": "reason"}
+
+
+### Response Format
+```json
+{
+  "buy_analysis1": {"decision": "good", "price": "expected purchase price", "reason": "reason"},
+  "buy_analysis2": {"decision": "good", "price": "final purchase price","reason": "reason"},
+  "sell_analysis1": {"decision": "good", "price": "expected sell price", "reason": "reason"},
+  "sell_analysis2": {"decision": "good", "price": "final sell price", "reason": "reason"}
+}
+expected purchase price and final price are real number. not a range
+
+
+### Circular Trading Mode Analysis Criteria 
+
+1. If there is a strong support zone, positively assess the likelihood of a rebound and consider the possibility of additional purchases.
+2. If there is a strong resistance zone, positively assess the likelihood of resistance and consider the possibility of partial sales.
+3. Evaluate the potential for rebounds and corrections primarily based on support and resistance levels, trendlines, and trading volume.
+4. Base decisions primarily on support and resistance levels, trendlines, and trading volume. Consider the possibility that a broken support level may act as resistance, and a broken resistance level may act as support.
+5. Consider the possibility that the trend may change if the trendline is broken.
